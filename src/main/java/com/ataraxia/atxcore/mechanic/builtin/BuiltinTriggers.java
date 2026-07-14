@@ -20,7 +20,7 @@ public final class BuiltinTriggers {
 
             @Override
             public String id() {
-                return "atxcore:player_join";
+                return "player_join";
             }
 
             @Override

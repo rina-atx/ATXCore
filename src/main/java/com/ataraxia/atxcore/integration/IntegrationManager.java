@@ -5,6 +5,7 @@ import com.ataraxia.atxcore.placeholder.PlaceholderService;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public final class IntegrationManager {
     private final ATXCorePlugin plugin;
@@ -13,7 +14,7 @@ public final class IntegrationManager {
     public IntegrationManager(ATXCorePlugin plugin, PlaceholderService placeholders) {
         this.plugin = plugin;
         register(new PlaceholderApiIntegration(plugin, placeholders));
-        register(new PluginPresenceIntegration(plugin, "Vault"));
+        register(new VaultIntegration(plugin));
     }
 
     public void register(Integration integration) {
@@ -35,6 +36,14 @@ public final class IntegrationManager {
 
     public Map<String, Integration> integrations() {
         return integrations;
+    }
+
+    public Optional<VaultIntegration> vault() {
+        Integration integration = integrations.get("Vault");
+        if (integration instanceof VaultIntegration vaultIntegration) {
+            return Optional.of(vaultIntegration);
+        }
+        return Optional.empty();
     }
 
     private void load(Integration integration) {

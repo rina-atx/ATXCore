@@ -1,0 +1,269 @@
+# ATXCore Guide
+# This file is a reference for plugin owners and future ATXCore addon plugins.
+# ATXCore itself does not automatically run this file.
+
+about:
+  plugin: "ATXCore"
+  purpose: "Reusable core mechanics for future plugins: effects, triggers, mutators, filters, conditions, placeholders, and integrations."
+  mechanic_ids:
+    format: "Built-in mechanic IDs are plain names."
+    examples:
+      - "message"
+      - "damage"
+      - "set_max_health"
+      - "vault_deposit"
+    note: "Future plugins may still register namespaced IDs like myplugin:custom_effect if they want."
+
+addon_plugin_setup:
+  plugin_yml:
+    depend:
+      - "ATXCore"
+    softdepend:
+      - "PlaceholderAPI"
+      - "Vault"
+  java_api_lookup: |
+    ATXCoreApi api = Bukkit.getServicesManager().load(ATXCoreApi.class);
+    if (api == null) {
+        getLogger().severe("ATXCore is not loaded.");
+        getServer().getPluginManager().disablePlugin(this);
+        return;
+    }
+
+context_data:
+  explanation: "Most mechanics read values from ExecutionContext data. For example, the message effect reads the key named message."
+  common_keys:
+    message: "Text for message, broadcast, title, action bar, delayed_message."
+    command: "Command for console_command, player_command, op_command, delay_console_command, repeat_console_command."
+    amount: "Number used by health, damage, food, money, stats, and many other effects."
+    world: "World name for teleport, world filters, and location building."
+    x: "X coordinate."
+    y: "Y coordinate."
+    z: "Z coordinate."
+    type: "Potion type or entity type depending on the mechanic."
+    material: "Minecraft material name such as DIAMOND or STONE."
+    stat: "Bukkit statistic name such as JUMP, PLAY_ONE_MINUTE, DAMAGE_DEALT."
+    attribute: "Bukkit attribute name such as GENERIC_MAX_HEALTH or GENERIC_ATTACK_DAMAGE."
+
+pipeline_order:
+  - "Conditions run first. If any condition fails, the pipeline stops."
+  - "Filters run second. If any filter blocks the context, the pipeline stops."
+  - "Mutators run third. They change or add context data."
+  - "Effects run last."
+
+examples:
+  welcome_message:
+    description: "Send a player a message when your addon receives a player context."
+    effects:
+      - id: "message"
+        data:
+          message: "&aWelcome, {player}!"
+
+  reward_money_with_vault:
+    description: "Only give money if Vault and an economy provider are installed."
+    filters:
+      - id: "player_only"
+    effects:
+      - id: "vault_deposit"
+        data:
+          amount: 250
+      - id: "message"
+        data:
+          message: "&6You received $250. Balance: {vault_balance_formatted}"
+
+  damage_and_sound:
+    description: "Damage the player and play a sound."
+    conditions:
+      - id: "health_above"
+        data:
+          amount: 4
+    effects:
+      - id: "damage"
+        data:
+          amount: 2
+      - id: "sound"
+        data:
+          sound: "ENTITY_PLAYER_HURT"
+          volume: 1
+          pitch: 1
+
+  temporary_stat_build:
+    description: "Modify Minecraft combat stats/attributes."
+    filters:
+      - id: "player_only"
+    effects:
+      - id: "set_max_health"
+        data:
+          amount: 40
+      - id: "set_attack_damage"
+        data:
+          amount: 8
+      - id: "set_movement_speed"
+        data:
+          amount: 0.14
+      - id: "add_absorption"
+        data:
+          amount: 6
+
+  statistic_tracking:
+    description: "Change Bukkit statistics."
+    effects:
+      - id: "increment_stat"
+        data:
+          stat: "JUMP"
+          amount: 10
+      - id: "set_stat"
+        data:
+          stat: "DAMAGE_DEALT"
+          amount: 100
+
+  data_mutation:
+    description: "Use mutators to prepare data before effects."
+    mutators:
+      - id: "random_int_data"
+        data:
+          key: "reward"
+          min: 50
+          max: 250
+      - id: "set_message"
+        data:
+          message: "&aReward rolled: {data.reward}"
+    effects:
+      - id: "message"
+
+placeholders:
+  internal_format: "{placeholder}"
+  papi_format: "%atxcore_placeholder%"
+  examples:
+    internal:
+      - "{player}"
+      - "{world}"
+      - "{player_health}"
+      - "{vault_balance}"
+      - "{data.reward}"
+    placeholderapi:
+      - "%atxcore_player%"
+      - "%atxcore_world%"
+      - "%atxcore_vault_balance%"
+  note: "The PlaceholderAPI prefix remains atxcore because PAPI needs a plugin identifier."
+
+integrations:
+  PlaceholderAPI:
+    enabled_in_config: "integrations.PlaceholderAPI.enabled"
+    provides:
+      - "External PlaceholderAPI placeholder parsing through PlaceholderService."
+      - "ATXCore placeholders as %atxcore_<placeholder>%."
+  Vault:
+    enabled_in_config: "integrations.Vault.enabled"
+    requires:
+      - "Vault plugin"
+      - "An economy plugin registered with Vault"
+    provides:
+      - "vault_deposit"
+      - "vault_withdraw"
+      - "vault_set_balance"
+      - "vault_has_money"
+      - "vault_balance_at_least"
+      - "{vault_balance}"
+      - "{vault_balance_formatted}"
+
+effect_categories:
+  messaging:
+    - "message"
+    - "broadcast"
+    - "action_bar"
+    - "title"
+    - "clear_title"
+  commands:
+    - "console_command"
+    - "player_command"
+    - "op_command"
+    - "delay_console_command"
+    - "repeat_console_command"
+  player_stats:
+    - "heal"
+    - "add_health"
+    - "damage"
+    - "set_max_health"
+    - "add_max_health"
+    - "reset_max_health"
+    - "set_attack_damage"
+    - "add_attack_damage"
+    - "set_attack_speed"
+    - "set_movement_speed"
+    - "add_movement_speed"
+    - "set_armor"
+    - "add_armor"
+    - "set_armor_toughness"
+    - "set_knockback_resistance"
+    - "set_luck"
+    - "set_absorption"
+    - "add_absorption"
+    - "set_exhaustion"
+    - "add_exhaustion"
+    - "set_remaining_air"
+    - "set_freeze_ticks"
+    - "set_no_damage_ticks"
+  inventory:
+    - "give_item"
+    - "take_item"
+    - "clear_inventory"
+  world:
+    - "teleport"
+    - "teleport_world_spawn"
+    - "spawn_particle"
+    - "strike_lightning_effect"
+    - "strike_lightning"
+    - "explosion"
+    - "set_time"
+    - "set_weather_clear"
+    - "set_weather_rain"
+    - "set_weather_thunder"
+    - "spawn_entity"
+  economy:
+    - "vault_deposit"
+    - "vault_withdraw"
+    - "vault_set_balance"
+
+conditions_and_filters:
+  common_conditions:
+    - "permission"
+    - "chance"
+    - "placeholder_equals"
+    - "health_above"
+    - "health_below"
+    - "level_at_least"
+    - "has_item"
+    - "attribute_at_least"
+    - "stat_at_least"
+    - "vault_has_money"
+  common_filters:
+    - "player_only"
+    - "entity_only"
+    - "location_only"
+    - "world"
+    - "permission"
+    - "gamemode"
+    - "health_range"
+    - "attribute_range"
+    - "vault_has_money"
+
+mutators:
+  common:
+    - "data"
+    - "remove_data"
+    - "copy_data"
+    - "append_data"
+    - "increment_data"
+    - "clamp_data"
+    - "random_int_data"
+    - "random_decimal_data"
+    - "player_to_data"
+    - "location_to_data"
+    - "attribute_to_data"
+    - "stat_to_data"
+    - "vault_balance_to_data"
+
+commands:
+  status: "/atxcore status"
+  reload: "/atxcore reload"
+  registry: "/atxcore registry"

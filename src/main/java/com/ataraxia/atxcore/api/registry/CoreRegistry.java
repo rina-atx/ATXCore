@@ -18,8 +18,8 @@ public final class CoreRegistry<T extends Identified> {
 
     public void register(T value) {
         String id = normalize(value.id());
-        if (!id.contains(":")) {
-            throw new IllegalArgumentException(name + " id must be namespaced: " + value.id());
+        if (id.isBlank()) {
+            throw new IllegalArgumentException(name + " id cannot be blank.");
         }
         if (values.containsKey(id)) {
             throw new IllegalArgumentException("Duplicate " + name + " id: " + id);

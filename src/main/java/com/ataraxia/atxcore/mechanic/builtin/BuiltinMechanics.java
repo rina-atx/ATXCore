@@ -9,7 +9,7 @@ public final class BuiltinMechanics {
     }
 
     public static void registerAll(ATXCorePlugin plugin, CoreRegistries registries, PlaceholderService placeholders) {
-        BuiltinPlaceholders.register(placeholders);
+        BuiltinPlaceholders.register(plugin, placeholders);
         BuiltinEffects.register(plugin, registries.effects(), placeholders);
         BuiltinConditions.register(registries.conditions(), placeholders);
         BuiltinFilters.register(registries.filters());

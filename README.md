@@ -10,9 +10,7 @@ ATXCore is a Paper/Bukkit core plugin for future ATX plugins. It exposes registr
 - Placeholders
 - Integrations
 
-See [MECHANICS.md](MECHANICS.md) for the full built-in effects, conditions, filters, mutators, and placeholders catalog.
-
-The hosted mechanics reference is available at <https://rina-atx.github.io/ATXCore/>.
+See the [ATXCore Wiki](https://github.com/rina-atx/ATXCore/wiki) for tutorials, examples, and the full built-in effects, triggers, conditions, filters, mutators, and placeholders catalog.
 
 Future plugins should depend on `ATXCore` in `plugin.yml`, then fetch the API from Bukkit services:
 

@@ -20,6 +20,7 @@ public final class ATXCorePlugin extends JavaPlugin implements ATXCoreApi {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        saveResource("guide.yml", false);
 
         this.registries = new CoreRegistries();
         this.placeholders = new PlaceholderService(this);

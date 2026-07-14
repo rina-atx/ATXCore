@@ -1,5 +1,6 @@
 package com.ataraxia.atxcore.mechanic.builtin;
 
+import com.ataraxia.atxcore.ATXCorePlugin;
 import com.ataraxia.atxcore.placeholder.PlaceholderProvider;
 import com.ataraxia.atxcore.placeholder.PlaceholderService;
 import org.bukkit.Bukkit;
@@ -8,7 +9,7 @@ public final class BuiltinPlaceholders {
     private BuiltinPlaceholders() {
     }
 
-    public static void register(PlaceholderService placeholders) {
+    public static void register(ATXCorePlugin plugin, PlaceholderService placeholders) {
         placeholders.register(new SimplePlaceholder("player", context -> context.player().map(player -> player.getName()).orElse("")));
         placeholders.register(new SimplePlaceholder("player_uuid", context -> context.player().map(player -> player.getUniqueId().toString()).orElse("")));
         placeholders.register(new SimplePlaceholder("player_display", context -> context.player().map(player -> player.getDisplayName()).orElse("")));
@@ -58,6 +59,20 @@ public final class BuiltinPlaceholders {
         placeholders.register(new SimplePlaceholder("tps_1m", context -> String.format("%.2f", Bukkit.getTPS()[0])));
         placeholders.register(new SimplePlaceholder("tps_5m", context -> String.format("%.2f", Bukkit.getTPS()[1])));
         placeholders.register(new SimplePlaceholder("tps_15m", context -> String.format("%.2f", Bukkit.getTPS()[2])));
+        placeholders.register(new SimplePlaceholder("vault_balance", context -> context.player()
+                .flatMap(player -> plugin.integrations().vault()
+                        .flatMap(vault -> vault.economy().map(economy -> String.valueOf(economy.getBalance(player)))))
+                .orElse("")));
+        placeholders.register(new SimplePlaceholder("vault_balance_formatted", context -> context.player()
+                .flatMap(player -> plugin.integrations().vault()
+                        .flatMap(vault -> vault.economy().map(economy -> economy.format(economy.getBalance(player)))))
+                .orElse("")));
+        placeholders.register(new SimplePlaceholder("vault_currency_singular", context -> plugin.integrations().vault()
+                .flatMap(vault -> vault.economy().map(economy -> economy.currencyNameSingular()))
+                .orElse("")));
+        placeholders.register(new SimplePlaceholder("vault_currency_plural", context -> plugin.integrations().vault()
+                .flatMap(vault -> vault.economy().map(economy -> economy.currencyNamePlural()))
+                .orElse("")));
 
         placeholders.register(new PlaceholderProvider() {
             @Override
