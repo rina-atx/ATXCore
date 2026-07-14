@@ -1,0 +1,12 @@
+settings:
+  debug: false
+
+placeholders:
+  prefix: "atxcore"
+  unknown-value: ""
+
+integrations:
+  PlaceholderAPI:
+    enabled: true
+  Vault:
+    enabled: true

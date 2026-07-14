@@ -1,0 +1,18 @@
+name: ATXCore
+version: ${project.version}
+main: com.ataraxia.atxcore.ATXCorePlugin
+api-version: '1.20'
+authors: [Ataraxia]
+description: Core effects, triggers, mutators, filters, conditions, placeholders, and integrations for ATX plugins.
+softdepend:
+  - PlaceholderAPI
+  - Vault
+commands:
+  atxcore:
+    description: ATXCore administration command.
+    usage: /atxcore <reload|status|registry>
+    permission: atxcore.admin
+permissions:
+  atxcore.admin:
+    description: Allows use of ATXCore administration commands.
+    default: op

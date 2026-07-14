@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ATXCore Mechanics</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2933;
+      --muted: #64748b;
+      --line: #d8e0ea;
+      --panel: #ffffff;
+      --soft: #f5f7fa;
+      --accent: #0f766e;
+      --accent-2: #7c3aed;
+      --code: #0f172a;
+      --code-bg: #e9eef5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--soft);
+      color: var(--ink);
+      font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      background: #12343b;
+      color: white;
+      border-bottom: 4px solid var(--accent);
+    }
+
+    .wrap {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 42px 0 30px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3.75rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      max-width: 780px;
+      margin: 0;
+      color: #d9e7e8;
+      font-size: 1.05rem;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 20px 0;
+    }
+
+    .search {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font: inherit;
+      background: white;
+      color: var(--ink);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      color: var(--ink);
+      padding: 10px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button[aria-pressed="true"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 10px;
+      padding-bottom: 22px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    main {
+      padding-bottom: 42px;
+    }
+
+    section {
+      margin: 0 0 22px;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.35rem;
+      letter-spacing: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    article {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      min-width: 0;
+    }
+
+    article h3 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 8px;
+      font-size: 1rem;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    code {
+      display: inline-block;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      color: var(--code);
+      background: var(--code-bg);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: white;
+      background: var(--accent-2);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .description {
+      margin: 0 0 10px;
+    }
+
+    .params {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .empty {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      color: var(--muted);
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 20px 0 34px;
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--accent);
+      font-weight: 650;
+    }
+
+    @media (max-width: 900px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .wrap {
+        width: min(100% - 20px, 1180px);
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      button {
+        padding: 9px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hero">
+      <h1>ATXCore Mechanics</h1>
+      <p>Reference for the built-in triggers, effects, conditions, filters, mutators, and placeholders provided by ATXCore.</p>
+    </div>
+  </header>
+
+  <div class="wrap toolbar" aria-label="Catalog controls">
+    <input class="search" id="search" type="search" placeholder="Search ids, descriptions, or parameters" autocomplete="off">
+    <div class="tabs" id="tabs" aria-label="Mechanic categories"></div>
+  </div>
+
+  <div class="wrap stats" id="stats" aria-label="Catalog counts"></div>
+
+  <main class="wrap" id="catalog"></main>
+  <div class="wrap empty" id="empty">No matching mechanics found.</div>
+
+  <footer>
+    <div class="wrap">
+      PlaceholderAPI names use the same providers as <code>%atxcore_player%</code>. Data placeholders use <code>{data.key_name}</code>.
+    </div>
+  </footer>
+
+  <script>
+    const catalog = [
+      {
+        key: "triggers",
+        title: "Triggers",
+        items: [
+          ["atxcore:player_join", "Runs a pipeline when a player joins the server.", "Context: player, event."]
+        ]
+      },
+      {
+        key: "effects",
+        title: "Effects",
+        items: [
+          ["atxcore:message", "Sends a placeholder-parsed chat message to the command sender.", "message"],
+          ["atxcore:console_command", "Runs a command as the server console.", "command"],
+          ["atxcore:sound", "Plays a sound to the current player.", "sound, volume, pitch"],
+          ["atxcore:broadcast", "Broadcasts a placeholder-parsed message to the whole server.", "message"],
+          ["atxcore:action_bar", "Sends an action bar message to the current player.", "message"],
+          ["atxcore:title", "Shows a title and subtitle to the current player.", "title, subtitle"],
+          ["atxcore:clear_title", "Clears and resets the current player's title display.", "No parameters."],
+          ["atxcore:player_command", "Makes the current player run a command.", "command"],
+          ["atxcore:op_command", "Temporarily grants operator status to run a player command, then restores the prior state.", "command"],
+          ["atxcore:teleport", "Teleports the current player to the location stored in context data.", "world, x, y, z, yaw, pitch"],
+          ["atxcore:teleport_world_spawn", "Teleports the current player to the current world's spawn.", "No parameters."],
+          ["atxcore:heal", "Sets the current player's health, capped at max health.", "amount"],
+          ["atxcore:add_health", "Adds health to the current player, capped at max health.", "amount"],
+          ["atxcore:damage", "Deals damage to the current player.", "amount"],
+          ["atxcore:kill", "Sets the current player's health to zero.", "No parameters."],
+          ["atxcore:feed", "Sets food level and saturation for the current player.", "amount, saturation"],
+          ["atxcore:add_food", "Adds food points to the current player, capped at 20.", "amount"],
+          ["atxcore:set_saturation", "Sets the current player's saturation.", "amount"],
+          ["atxcore:extinguish", "Clears fire ticks on the current entity.", "No parameters."],
+          ["atxcore:set_fire_ticks", "Sets how long the current entity remains on fire.", "ticks"],
+          ["atxcore:add_potion", "Adds a potion effect to the current player.", "type, duration, amplifier"],
+          ["atxcore:remove_potion", "Removes a potion effect from the current player.", "type"],
+          ["atxcore:clear_potions", "Removes all active potion effects from the current player.", "No parameters."],
+          ["atxcore:give_item", "Gives a Bukkit material stack to the current player.", "material, amount"],
+          ["atxcore:take_item", "Removes a Bukkit material stack from the current player's inventory.", "material, amount"],
+          ["atxcore:clear_inventory", "Clears the current player's inventory.", "No parameters."],
+          ["atxcore:set_gamemode", "Sets the current player's game mode.", "mode"],
+          ["atxcore:set_flying", "Sets whether the current player is flying.", "value"],
+          ["atxcore:set_allow_flight", "Sets whether the current player is allowed to fly.", "value"],
+          ["atxcore:set_exp", "Sets the current player's experience progress from 0 to 1.", "amount"],
+          ["atxcore:give_exp", "Gives raw experience to the current player.", "amount"],
+          ["atxcore:set_level", "Sets the current player's level.", "level"],
+          ["atxcore:add_level", "Adds levels to the current player.", "amount"],
+          ["atxcore:spawn_particle", "Spawns particles at the current location.", "particle, count"],
+          ["atxcore:strike_lightning_effect", "Shows a lightning strike effect at the current location without damage.", "No parameters."],
+          ["atxcore:strike_lightning", "Strikes real lightning at the current location.", "No parameters."],
+          ["atxcore:explosion", "Creates an explosion at the current location.", "power, fire, break_blocks"],
+          ["atxcore:set_time", "Sets the current world's time.", "time"],
+          ["atxcore:set_weather_clear", "Clears storm and thunder in the current world.", "No parameters."],
+          ["atxcore:set_weather_rain", "Starts rain without thunder in the current world.", "No parameters."],
+          ["atxcore:set_weather_thunder", "Starts rain and thunder in the current world.", "No parameters."],
+          ["atxcore:play_world_sound", "Plays a sound at the current location for nearby players.", "sound, volume, pitch"],
+          ["atxcore:stop_sound", "Stops a named sound for the current player.", "sound"],
+          ["atxcore:set_velocity", "Sets the current entity's velocity vector.", "x, y, z"],
+          ["atxcore:launch_up", "Changes the current entity's vertical velocity.", "power"],
+          ["atxcore:close_inventory", "Closes the current player's open inventory.", "No parameters."],
+          ["atxcore:open_workbench", "Opens a workbench for the current player.", "No parameters."],
+          ["atxcore:kick", "Kicks the current player with a placeholder-parsed reason.", "reason"],
+          ["atxcore:set_display_name", "Sets the current player's display name.", "name"],
+          ["atxcore:reset_display_name", "Resets the current player's display name to their username.", "No parameters."],
+          ["atxcore:set_player_list_name", "Sets the current player's tab-list name.", "name"],
+          ["atxcore:set_glowing", "Sets whether the current entity is glowing.", "value"],
+          ["atxcore:set_invulnerable", "Sets whether the current entity is invulnerable.", "value"],
+          ["atxcore:spawn_entity", "Spawns an entity at the current location.", "type"],
+          ["atxcore:delay_console_command", "Runs a console command after a delay in ticks.", "delay, command"],
+          ["atxcore:delayed_message", "Sends the sender a message after a delay in ticks.", "delay, message"],
+          ["atxcore:repeat_console_command", "Runs a console command repeatedly with a tick interval.", "times, command, interval"]
+        ]
+      },
+      {
+        key: "conditions",
+        title: "Conditions",
+        items: [
+          ["atxcore:permission", "Passes when the sender has the required permission.", "permission"],
+          ["atxcore:chance", "Passes randomly using a 0 to 1 chance value.", "chance"],
+          ["atxcore:placeholder_equals", "Compares two placeholder-parsed strings case-insensitively.", "left, right"],
+          ["atxcore:player_online", "Passes when the context has a player.", "No parameters."],
+          ["atxcore:world", "Passes when the current world name matches.", "world"],
+          ["atxcore:gamemode", "Passes when the current player's game mode matches.", "mode"],
+          ["atxcore:health_above", "Passes when player health is above the amount.", "amount"],
+          ["atxcore:health_below", "Passes when player health is below the amount.", "amount"],
+          ["atxcore:food_above", "Passes when player food level is above the amount.", "amount"],
+          ["atxcore:food_below", "Passes when player food level is below the amount.", "amount"],
+          ["atxcore:level_at_least", "Passes when player level is at least the configured level.", "level"],
+          ["atxcore:level_below", "Passes when player level is below the configured level.", "level"],
+          ["atxcore:has_item", "Passes when the player inventory contains a material and amount.", "material, amount"],
+          ["atxcore:holding_item", "Passes when the player is holding a material in the main hand.", "material"],
+          ["atxcore:sneaking", "Passes when the player's sneaking state matches.", "value"],
+          ["atxcore:sprinting", "Passes when the player's sprinting state matches.", "value"],
+          ["atxcore:flying", "Passes when the player's flying state matches.", "value"],
+          ["atxcore:op", "Passes when the sender operator state matches.", "value"],
+          ["atxcore:has_potion", "Passes when the player has a potion effect.", "type"],
+          ["atxcore:in_region_box", "Passes when the current location is inside a coordinate box.", "x1, y1, z1, x2, y2, z2"],
+          ["atxcore:data_exists", "Passes when context data contains a key.", "key"],
+          ["atxcore:data_equals", "Passes when a context data value equals the expected value.", "key, value"],
+          ["atxcore:string_contains", "Passes when one placeholder-parsed string contains another.", "text, contains"],
+          ["atxcore:number_greater", "Passes when left is greater than right.", "left, right"],
+          ["atxcore:number_less", "Passes when left is less than right.", "left, right"],
+          ["atxcore:biome", "Passes when the current block biome matches.", "biome"],
+          ["atxcore:dimension", "Passes when the current world environment matches.", "environment"],
+          ["atxcore:weather", "Passes when current weather is clear, rain, or thunder.", "weather"],
+          ["atxcore:time_between", "Passes when world time is inside the inclusive range.", "min, max"]
+        ]
+      },
+      {
+        key: "filters",
+        title: "Filters",
+        items: [
+          ["atxcore:player_only", "Allows only contexts with a player.", "No parameters."],
+          ["atxcore:entity_only", "Allows only contexts with an entity.", "No parameters."],
+          ["atxcore:location_only", "Allows only contexts with a location.", "No parameters."],
+          ["atxcore:world", "Allows contexts in the named world.", "world"],
+          ["atxcore:not_world", "Allows contexts not in the named world.", "world"],
+          ["atxcore:permission", "Allows senders with a permission.", "permission"],
+          ["atxcore:no_permission", "Allows senders without a permission.", "permission"],
+          ["atxcore:gamemode", "Allows players in a named game mode.", "mode"],
+          ["atxcore:survival", "Allows survival-mode players.", "No parameters."],
+          ["atxcore:creative", "Allows creative-mode players.", "No parameters."],
+          ["atxcore:has_item", "Allows players with a material and amount in inventory.", "material, amount"],
+          ["atxcore:holding_item", "Allows players holding a material in the main hand.", "material"],
+          ["atxcore:health_range", "Allows players whose health is within a range.", "min, max"],
+          ["atxcore:level_range", "Allows players whose level is within a range.", "min, max"],
+          ["atxcore:biome", "Allows locations in the named biome.", "biome"],
+          ["atxcore:dimension", "Allows worlds with the named environment.", "environment"],
+          ["atxcore:data_exists", "Allows contexts with a data key.", "key"],
+          ["atxcore:data_equals", "Allows contexts where a data key equals a value.", "key, value"],
+          ["atxcore:random_percent", "Allows randomly using a 0 to 100 percent value.", "percent"],
+          ["atxcore:name_contains", "Allows players whose name contains text.", "text"]
+        ]
+      },
+      {
+        key: "mutators",
+        title: "Mutators",
+        items: [
+          ["atxcore:data", "Sets a context data value.", "key, value"],
+          ["atxcore:remove_data", "Removes a context data key.", "key"],
+          ["atxcore:clear_data", "Clears all context data.", "No parameters."],
+          ["atxcore:copy_data", "Copies one context data value to another key.", "from, to"],
+          ["atxcore:append_data", "Appends text to a context data value.", "key, append"],
+          ["atxcore:prepend_data", "Prepends text to a context data value.", "key, prepend"],
+          ["atxcore:uppercase_data", "Uppercases a context data value.", "key"],
+          ["atxcore:lowercase_data", "Lowercases a context data value.", "key"],
+          ["atxcore:increment_data", "Adds a number to a numeric context data value.", "key, amount"],
+          ["atxcore:multiply_data", "Multiplies a numeric context data value.", "key, amount"],
+          ["atxcore:clamp_data", "Clamps a numeric context data value between min and max.", "key, min, max"],
+          ["atxcore:set_message", "Stores a message in context data.", "message"],
+          ["atxcore:set_command", "Stores a command in context data.", "command"],
+          ["atxcore:set_amount", "Stores an amount in context data.", "amount"],
+          ["atxcore:set_world", "Stores a world name in context data.", "world"],
+          ["atxcore:set_coordinates", "Stores x, y, and z coordinates in context data.", "x, y, z"]
+        ]
+      },
+      {
+        key: "placeholders",
+        title: "Placeholders",
+        items: [
+          ["{player}", "Current player name.", "Also available through PlaceholderAPI as %atxcore_player%."],
+          ["{player_uuid}", "Current player UUID.", "Player context required."],
+          ["{player_display}", "Current player display name.", "Player context required."],
+          ["{player_list_name}", "Current player tab-list name.", "Player context required."],
+          ["{player_health}", "Current player health.", "Player context required."],
+          ["{player_max_health}", "Current player max health.", "Player context required."],
+          ["{player_food}", "Current player food level.", "Player context required."],
+          ["{player_saturation}", "Current player saturation.", "Player context required."],
+          ["{player_level}", "Current player level.", "Player context required."],
+          ["{player_exp}", "Current player experience progress.", "Player context required."],
+          ["{player_gamemode}", "Current player game mode.", "Player context required."],
+          ["{player_ping}", "Current player ping.", "Player context required."],
+          ["{player_locale}", "Current player locale language tag.", "Player context required."],
+          ["{player_world}", "Current player's world name.", "Player context required."],
+          ["{player_x}", "Current player's block X coordinate.", "Player context required."],
+          ["{player_y}", "Current player's block Y coordinate.", "Player context required."],
+          ["{player_z}", "Current player's block Z coordinate.", "Player context required."],
+          ["{player_biome}", "Current player's biome.", "Player context required."],
+          ["{player_flying}", "Whether the current player is flying.", "Player context required."],
+          ["{player_sneaking}", "Whether the current player is sneaking.", "Player context required."],
+          ["{player_sprinting}", "Whether the current player is sprinting.", "Player context required."],
+          ["{entity_type}", "Current entity type.", "Entity context required."],
+          ["{entity_uuid}", "Current entity UUID.", "Entity context required."],
+          ["{entity_world}", "Current entity world name.", "Entity context required."],
+          ["{world}", "Current world name.", "World context required."],
+          ["{world_time}", "Current world day time.", "World context required."],
+          ["{world_full_time}", "Current world full time.", "World context required."],
+          ["{world_environment}", "Current world environment.", "World context required."],
+          ["{world_weather}", "Current weather: clear, rain, or thunder.", "World context required."],
+          ["{world_players}", "Number of players in the current world.", "World context required."],
+          ["{x}", "Current block X coordinate.", "Location context required."],
+          ["{y}", "Current block Y coordinate.", "Location context required."],
+          ["{z}", "Current block Z coordinate.", "Location context required."],
+          ["{yaw}", "Current location yaw.", "Location context required."],
+          ["{pitch}", "Current location pitch.", "Location context required."],
+          ["{block_type}", "Block type at the current location.", "Location context required."],
+          ["{biome}", "Biome at the current location.", "Location context required."],
+          ["{server_online}", "Current number of online players.", "No context required."],
+          ["{server_max}", "Server max player count.", "No context required."],
+          ["{server_name}", "Bukkit server name.", "No context required."],
+          ["{server_version}", "Bukkit server version.", "No context required."],
+          ["{server_motd}", "Server MOTD.", "No context required."],
+          ["{tps_1m}", "One-minute server TPS.", "No context required."],
+          ["{tps_5m}", "Five-minute server TPS.", "No context required."],
+          ["{tps_15m}", "Fifteen-minute server TPS.", "No context required."],
+          ["{data.key_name}", "Reads a value from context data by key.", "Replace key_name with your data key."]
+        ]
+      }
+    ];
+
+    const tabs = document.querySelector("#tabs");
+    const stats = document.querySelector("#stats");
+    const catalogNode = document.querySelector("#catalog");
+    const search = document.querySelector("#search");
+    const empty = document.querySelector("#empty");
+    let active = "all";
+
+    function totalItems() {
+      return catalog.reduce((sum, group) => sum + group.items.length, 0);
+    }
+
+    function renderTabs() {
+      const buttons = [["all", "All"]].concat(catalog.map(group => [group.key, group.title]));
+      tabs.innerHTML = buttons.map(([key, label]) =>
+        `<button type="button" data-tab="${key}" aria-pressed="${key === active}">${label}</button>`
+      ).join("");
+    }
+
+    function renderStats() {
+      stats.innerHTML = catalog.map(group =>
+        `<div class="stat"><strong>${group.items.length}</strong><span>${group.title}</span></div>`
+      ).join("") + `<div class="stat"><strong>${totalItems()}</strong><span>Total</span></div>`;
+    }
+
+    function itemMatches(item, query) {
+      return item.join(" ").toLowerCase().includes(query);
+    }
+
+    function renderCatalog() {
+      const query = search.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      catalogNode.innerHTML = catalog
+        .filter(group => active === "all" || group.key === active)
+        .map(group => {
+          const items = group.items.filter(item => itemMatches(item, query));
+          visibleCount += items.length;
+          if (items.length === 0) {
+            return "";
+          }
+          return `
+            <section data-section="${group.key}">
+              <h2>${group.title}</h2>
+              <div class="grid">
+                ${items.map(item => `
+                  <article>
+                    <h3><code>${item[0]}</code><span class="badge">${group.key}</span></h3>
+                    <p class="description">${item[1]}</p>
+                    <p class="params"><strong>Inputs:</strong> ${item[2]}</p>
+                  </article>
+                `).join("")}
+              </div>
+            </section>
+          `;
+        }).join("");
+
+      empty.style.display = visibleCount === 0 ? "block" : "none";
+    }
+
+    tabs.addEventListener("click", event => {
+      const button = event.target.closest("button[data-tab]");
+      if (!button) {
+        return;
+      }
+      active = button.dataset.tab;
+      renderTabs();
+      renderCatalog();
+    });
+
+    search.addEventListener("input", renderCatalog);
+    renderTabs();
+    renderStats();
+    renderCatalog();
+  </script>
+</body>
+</html>
