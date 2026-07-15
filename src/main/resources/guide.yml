@@ -28,10 +28,66 @@ addon_plugin_setup:
         getServer().getPluginManager().disablePlugin(this);
         return;
     }
+  triggered_pipeline_example: |
+    Trigger trigger = api.registries().triggers().get("melee_attack").orElseThrow();
+    Effect<?> damage = api.registries().effects().get("damage").orElseThrow();
+    Mutator<?> targetVictim = api.registries().mutators().get("target_victim").orElseThrow();
+    Filter<?> noCreepers = api.registries().filters().get("not_target_entity_type").orElseThrow();
+
+    MechanicPipeline pipeline = new MechanicPipeline()
+        .condition(actorHealthAbove)
+        .mutator(targetVictim)
+        .filter(noCreepers)
+        .effect(damage);
+
+    new TriggeredPipeline(trigger, pipeline).start();
+  eco_style_loader_example: |
+    TriggeredPipeline pipeline = api.mechanicLoader().loadTriggeredPipeline(config.getConfigurationSection("chains.bleed-hit"));
+    pipeline.start();
+
+eco_style_yaml:
+  explanation: "This is the recommended format for future ATXCore-based plugins. It mirrors the eco-style idea: trigger, conditions, mutators, filters, effects."
+  important_rules:
+    - "Each list item has an id."
+    - "Each list item can have data. That data is local to that condition/filter/mutator/effect."
+    - "Trigger/event data is separate and can be read with {data.key}."
+    - "Mutators choose the active target before filters and effects run."
+  example:
+    chains:
+      bleed-hit:
+        trigger: "melee_attack"
+        conditions:
+          - id: "actor_health_above"
+            data:
+              amount: 20
+        mutators:
+          - id: "target_victim"
+        filters:
+          - id: "not_target_entity_type"
+            data:
+              type: "minecraft:creeper"
+        effects:
+          - id: "damage"
+            data:
+              amount: 4
+          - id: "message"
+            data:
+              message: "&c{actor} made you bleed for 4 damage."
 
 context_data:
-  explanation: "Most mechanics read values from ExecutionContext data. For example, the message effect reads the key named message."
+  explanation: "Context data is temporary key-value data attached to one trigger run. Triggers add event data, mutators change it, conditions/filters read it, effects consume it, and placeholders can print it."
+  lifetime: "Context data exists only while one pipeline is running. It is not saved to disk and is not shared globally."
+  where_it_comes_from:
+    - "Triggers add event-specific values. Example: block_break adds block_type and exp."
+    - "Mutators add or change values. Example: set_data writes any key/value pair."
+    - "Addon plugins can add data when they build an ExecutionContext in Java."
+  how_to_read_it:
+    placeholder: "{data.key_name}"
+    java: "context.stringData(\"key_name\")"
   common_keys:
+    actor_type: "Entity type that caused the trigger, such as PLAYER, ZOMBIE, or ARROW."
+    target_type: "Entity type the trigger is about, such as PLAYER, CREEPER, or ZOMBIE."
+    active_type: "Entity type currently selected for effects after mutators run."
     message: "Text for message, broadcast, title, action bar, delayed_message."
     command: "Command for console_command, player_command, op_command, delay_console_command, repeat_console_command."
     amount: "Number used by health, damage, food, money, stats, and many other effects."
@@ -42,13 +98,23 @@ context_data:
     type: "Potion type or entity type depending on the mechanic."
     material: "Minecraft material name such as DIAMOND or STONE."
     stat: "Bukkit statistic name such as JUMP, PLAY_ONE_MINUTE, DAMAGE_DEALT."
-    attribute: "Bukkit attribute name such as GENERIC_MAX_HEALTH or GENERIC_ATTACK_DAMAGE."
+    attribute: "Bukkit attribute name from the Spigot Attribute docs, such as MAX_HEALTH, ATTACK_DAMAGE, MOVEMENT_SPEED, SCALE, or BLOCK_INTERACTION_RANGE."
 
 pipeline_order:
-  - "Conditions run first. If any condition fails, the pipeline stops."
-  - "Filters run second. If any filter blocks the context, the pipeline stops."
-  - "Mutators run third. They change or add context data."
+  - "A trigger creates a context with an actor, target, location, event, and event data."
+  - "Conditions run first. They decide whether the trigger is allowed to continue, usually checking the actor/user."
+  - "Mutators run second. They change data or select the active target for effects."
+  - "Filters run third. Generic filters check the active context, while actor_* and target_* filters check the original actor or target."
   - "Effects run last."
+
+actor_target_model:
+  actor: "The entity that caused the trigger. In melee_attack this is the attacker."
+  target: "The entity the trigger is about. In melee_attack this is the victim."
+  active_target: "The entity that effects currently hit. Mutators such as target_victim and target_attacker change this."
+  default_behavior:
+    melee_attack: "Active target starts as the attacker. Add target_victim before effects to hit the victim instead."
+    entity_damage_by_entity: "Active target starts as the damaged entity."
+    player_triggers: "Actor, target, and active target are usually the same player."
 
 examples:
   welcome_message:
@@ -86,6 +152,29 @@ examples:
           volume: 1
           pitch: 1
 
+  melee_attack_damage_victim_except_creepers:
+    description: "On melee attack, require the attacker to be above 20 health points, switch effects to the victim, block creepers, then damage the victim."
+    trigger: "melee_attack"
+    conditions:
+      - id: "actor_health_above"
+        data:
+          amount: 20
+    mutators:
+      - id: "target_victim"
+    filters:
+      - id: "not_target_entity_type"
+        data:
+          type: "minecraft:creeper"
+    effects:
+      - id: "damage"
+        data:
+          amount: 4
+      - id: "sound"
+        data:
+          sound: "ENTITY_PLAYER_ATTACK_CRIT"
+          volume: 1
+          pitch: 1
+
   temporary_stat_build:
     description: "Modify Minecraft combat stats/attributes."
     filters:
@@ -100,6 +189,9 @@ examples:
       - id: "set_movement_speed"
         data:
           amount: 0.14
+      - id: "set_scale"
+        data:
+          amount: 1.1
       - id: "add_absorption"
         data:
           amount: 6
@@ -129,6 +221,18 @@ examples:
           message: "&aReward rolled: {data.reward}"
     effects:
       - id: "message"
+
+  explicit_context_data:
+    description: "set_data writes a temporary key into the current pipeline context."
+    mutators:
+      - id: "set_data"
+        data:
+          key: "reward_name"
+          value: "Daily Crate"
+    effects:
+      - id: "message"
+        data:
+          message: "&aYou received: {data.reward_name}"
 
 placeholders:
   internal_format: "{placeholder}"
@@ -196,6 +300,22 @@ effect_categories:
     - "set_armor_toughness"
     - "set_knockback_resistance"
     - "set_luck"
+    - "set_follow_range"
+    - "set_flying_speed_attribute"
+    - "set_attack_knockback"
+    - "set_max_absorption_attribute"
+    - "set_safe_fall_distance"
+    - "set_scale"
+    - "set_step_height"
+    - "set_gravity_attribute"
+    - "set_jump_strength"
+    - "set_block_interaction_range"
+    - "set_entity_interaction_range"
+    - "set_block_break_speed"
+    - "set_mining_efficiency"
+    - "set_sneaking_speed"
+    - "set_submerged_mining_speed"
+    - "set_sweeping_damage_ratio"
     - "set_absorption"
     - "add_absorption"
     - "set_exhaustion"
@@ -236,6 +356,9 @@ conditions_and_filters:
     - "attribute_at_least"
     - "stat_at_least"
     - "vault_has_money"
+    - "actor_health_above"
+    - "target_health_above"
+    - "actor_has_permission"
   common_filters:
     - "player_only"
     - "entity_only"
@@ -246,10 +369,21 @@ conditions_and_filters:
     - "health_range"
     - "attribute_range"
     - "vault_has_money"
+    - "target_entity_type"
+    - "not_target_entity_type"
+    - "actor_entity_type"
+    - "not_actor_entity_type"
 
 mutators:
   common:
-    - "data"
+    - "target_actor"
+    - "target_attacker"
+    - "target_self"
+    - "target_victim"
+    - "target_target"
+    - "actor_to_data"
+    - "target_to_data"
+    - "set_data"
     - "remove_data"
     - "copy_data"
     - "append_data"
