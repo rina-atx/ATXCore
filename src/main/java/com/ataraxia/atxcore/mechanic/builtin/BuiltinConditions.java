@@ -8,7 +8,6 @@ import com.ataraxia.atxcore.placeholder.PlaceholderService;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.EntityType;
 import org.bukkit.potion.PotionEffectType;
 
@@ -37,6 +36,22 @@ public final class BuiltinConditions {
         }));
 
         registry.register(new SimpleCondition("player_online", context -> context.player().isPresent() ? ConditionResult.pass() : ConditionResult.fail("No player")));
+        registry.register(new SimpleCondition("actor_player", context -> context.actorPlayer().isPresent() ? ConditionResult.pass() : ConditionResult.fail("Actor is not a player")));
+        registry.register(new SimpleCondition("target_player", context -> context.targetPlayer().isPresent() ? ConditionResult.pass() : ConditionResult.fail("Target is not a player")));
+        registry.register(new SimpleCondition("actor_health_above", context ->
+                context.actorPlayer().filter(player -> player.getHealth() > BuiltinValue.decimal(context, "amount", 0)).isPresent()
+                        ? ConditionResult.pass()
+                        : ConditionResult.fail("Actor health too low")));
+        registry.register(new SimpleCondition("target_health_above", context ->
+                context.targetPlayer().filter(player -> player.getHealth() > BuiltinValue.decimal(context, "amount", 0)).isPresent()
+                        ? ConditionResult.pass()
+                        : ConditionResult.fail("Target health too low")));
+        registry.register(new SimpleCondition("actor_has_permission", context -> {
+            String permission = BuiltinValue.string(context, "permission", "");
+            return context.actorPlayer().filter(player -> player.hasPermission(permission)).isPresent()
+                    ? ConditionResult.pass()
+                    : ConditionResult.fail("Actor missing permission " + permission);
+        }));
         registry.register(new SimpleCondition("world", context ->
                 context.world().filter(world -> world.getName().equalsIgnoreCase(BuiltinValue.string(context, "world", ""))).isPresent()
                         ? ConditionResult.pass()
@@ -161,15 +176,15 @@ public final class BuiltinConditions {
                         ? ConditionResult.pass()
                         : ConditionResult.fail("Attribute too high")));
         registry.register(new SimpleCondition("max_health_at_least", context ->
-                attributeValue(context, "GENERIC_MAX_HEALTH").filter(value -> value >= BuiltinValue.decimal(context, "amount", 20)).isPresent()
+                attributeValue(context, "MAX_HEALTH").filter(value -> value >= BuiltinValue.decimal(context, "amount", 20)).isPresent()
                         ? ConditionResult.pass()
                         : ConditionResult.fail("Max health too low")));
         registry.register(new SimpleCondition("attack_damage_at_least", context ->
-                attributeValue(context, "GENERIC_ATTACK_DAMAGE").filter(value -> value >= BuiltinValue.decimal(context, "amount", 1)).isPresent()
+                attributeValue(context, "ATTACK_DAMAGE").filter(value -> value >= BuiltinValue.decimal(context, "amount", 1)).isPresent()
                         ? ConditionResult.pass()
                         : ConditionResult.fail("Attack damage too low")));
         registry.register(new SimpleCondition("movement_speed_at_least", context ->
-                attributeValue(context, "GENERIC_MOVEMENT_SPEED").filter(value -> value >= BuiltinValue.decimal(context, "amount", 0.1)).isPresent()
+                attributeValue(context, "MOVEMENT_SPEED").filter(value -> value >= BuiltinValue.decimal(context, "amount", 0.1)).isPresent()
                         ? ConditionResult.pass()
                         : ConditionResult.fail("Movement speed too low")));
         registry.register(new SimpleCondition("stat_at_least", context ->
@@ -195,14 +210,7 @@ public final class BuiltinConditions {
     }
 
     private static java.util.Optional<Double> attributeValue(ExecutionContext context, String attributeName) {
-        return context.player().flatMap(player -> {
-            try {
-                Attribute attribute = Attribute.valueOf(attributeName.toUpperCase(Locale.ROOT));
-                return java.util.Optional.ofNullable(player.getAttribute(attribute)).map(instance -> instance.getValue());
-            } catch (IllegalArgumentException exception) {
-                return java.util.Optional.empty();
-            }
-        });
+        return context.entity().flatMap(entity -> BuiltinAttribute.value(entity, attributeName));
     }
 
     private static java.util.Optional<Integer> statisticValue(ExecutionContext context) {
