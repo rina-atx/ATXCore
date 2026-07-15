@@ -11,7 +11,7 @@ final class BuiltinValue {
     }
 
     static String string(ExecutionContext context, String key, String fallback) {
-        return context.stringData(key).orElse(fallback);
+        return context.value(key).orElse(fallback);
     }
 
     static int integer(ExecutionContext context, String key, int fallback) {
@@ -47,6 +47,18 @@ final class BuiltinValue {
             return false;
         }
         return fallback;
+    }
+
+    static String minecraftKey(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim()
+                .toUpperCase(Locale.ROOT)
+                .replace("ENTITY_MINECRAFT:", "")
+                .replace("MINECRAFT:", "")
+                .replace('-', '_')
+                .replace(' ', '_');
     }
 
     static Location location(ExecutionContext context) {
