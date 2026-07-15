@@ -15,7 +15,7 @@ public final class BuiltinPlaceholders {
         placeholders.register(new SimplePlaceholder("player_display", context -> context.player().map(player -> player.getDisplayName()).orElse("")));
         placeholders.register(new SimplePlaceholder("player_list_name", context -> context.player().map(player -> player.getPlayerListName()).orElse("")));
         placeholders.register(new SimplePlaceholder("player_health", context -> context.player().map(player -> String.valueOf(player.getHealth())).orElse("")));
-        placeholders.register(new SimplePlaceholder("player_max_health", context -> context.player().map(player -> String.valueOf(player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue())).orElse("")));
+        placeholders.register(new SimplePlaceholder("player_max_health", context -> context.player().flatMap(player -> BuiltinAttribute.value(player, "MAX_HEALTH")).map(String::valueOf).orElse("")));
         placeholders.register(new SimplePlaceholder("player_food", context -> context.player().map(player -> String.valueOf(player.getFoodLevel())).orElse("")));
         placeholders.register(new SimplePlaceholder("player_saturation", context -> context.player().map(player -> String.valueOf(player.getSaturation())).orElse("")));
         placeholders.register(new SimplePlaceholder("player_level", context -> context.player().map(player -> String.valueOf(player.getLevel())).orElse("")));
@@ -31,6 +31,14 @@ public final class BuiltinPlaceholders {
         placeholders.register(new SimplePlaceholder("player_flying", context -> context.player().map(player -> String.valueOf(player.isFlying())).orElse("")));
         placeholders.register(new SimplePlaceholder("player_sneaking", context -> context.player().map(player -> String.valueOf(player.isSneaking())).orElse("")));
         placeholders.register(new SimplePlaceholder("player_sprinting", context -> context.player().map(player -> String.valueOf(player.isSprinting())).orElse("")));
+
+        placeholders.register(new SimplePlaceholder("active_type", context -> context.entity().map(entity -> entity.getType().name()).orElse("")));
+        placeholders.register(new SimplePlaceholder("actor", context -> context.actorPlayer().map(player -> player.getName()).orElse("")));
+        placeholders.register(new SimplePlaceholder("actor_type", context -> context.actor().map(entity -> entity.getType().name()).orElse("")));
+        placeholders.register(new SimplePlaceholder("actor_uuid", context -> context.actor().map(entity -> entity.getUniqueId().toString()).orElse("")));
+        placeholders.register(new SimplePlaceholder("target", context -> context.targetPlayer().map(player -> player.getName()).orElse("")));
+        placeholders.register(new SimplePlaceholder("target_type", context -> context.target().map(entity -> entity.getType().name()).orElse("")));
+        placeholders.register(new SimplePlaceholder("target_uuid", context -> context.target().map(entity -> entity.getUniqueId().toString()).orElse("")));
 
         placeholders.register(new SimplePlaceholder("entity_type", context -> context.entity().map(entity -> entity.getType().name()).orElse("")));
         placeholders.register(new SimplePlaceholder("entity_uuid", context -> context.entity().map(entity -> entity.getUniqueId().toString()).orElse("")));
