@@ -8,6 +8,7 @@ import com.ataraxia.atxcore.mechanic.mutator.Mutator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class MechanicPipeline {
     private final List<Condition<ExecutionContext>> conditions = new ArrayList<>();
@@ -20,8 +21,38 @@ public final class MechanicPipeline {
         return this;
     }
 
+    public MechanicPipeline condition(Condition<ExecutionContext> condition, Map<String, Object> parameters) {
+        conditions.add(new Condition<ExecutionContext>() {
+            @Override
+            public String id() {
+                return condition.id();
+            }
+
+            @Override
+            public com.ataraxia.atxcore.mechanic.condition.ConditionResult test(ExecutionContext context) {
+                return condition.test(context.withParameters(parameters));
+            }
+        });
+        return this;
+    }
+
     public MechanicPipeline filter(Filter<ExecutionContext> filter) {
         filters.add(filter);
+        return this;
+    }
+
+    public MechanicPipeline filter(Filter<ExecutionContext> filter, Map<String, Object> parameters) {
+        filters.add(new Filter<ExecutionContext>() {
+            @Override
+            public String id() {
+                return filter.id();
+            }
+
+            @Override
+            public boolean allow(ExecutionContext context) {
+                return filter.allow(context.withParameters(parameters));
+            }
+        });
         return this;
     }
 
@@ -30,8 +61,38 @@ public final class MechanicPipeline {
         return this;
     }
 
+    public MechanicPipeline mutator(Mutator<ExecutionContext> mutator, Map<String, Object> parameters) {
+        mutators.add(new Mutator<ExecutionContext>() {
+            @Override
+            public String id() {
+                return mutator.id();
+            }
+
+            @Override
+            public ExecutionContext mutate(ExecutionContext context) {
+                return mutator.mutate(context.withParameters(parameters));
+            }
+        });
+        return this;
+    }
+
     public MechanicPipeline effect(Effect<ExecutionContext> effect) {
         effects.add(effect);
+        return this;
+    }
+
+    public MechanicPipeline effect(Effect<ExecutionContext> effect, Map<String, Object> parameters) {
+        effects.add(new Effect<ExecutionContext>() {
+            @Override
+            public String id() {
+                return effect.id();
+            }
+
+            @Override
+            public void execute(ExecutionContext context) {
+                effect.execute(context.withParameters(parameters));
+            }
+        });
         return this;
     }
 
@@ -42,13 +103,13 @@ public final class MechanicPipeline {
                 return;
             }
         }
+        for (Mutator<ExecutionContext> mutator : mutators) {
+            context = mutator.mutate(context);
+        }
         for (Filter<ExecutionContext> filter : filters) {
             if (!filter.allow(context)) {
                 return;
             }
-        }
-        for (Mutator<ExecutionContext> mutator : mutators) {
-            context = mutator.mutate(context);
         }
         for (Effect<ExecutionContext> effect : effects) {
             effect.execute(context);
