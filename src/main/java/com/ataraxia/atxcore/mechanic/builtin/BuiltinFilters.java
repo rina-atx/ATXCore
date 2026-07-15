@@ -4,7 +4,6 @@ import com.ataraxia.atxcore.api.registry.CoreRegistry;
 import com.ataraxia.atxcore.mechanic.ExecutionContext;
 import com.ataraxia.atxcore.mechanic.filter.Filter;
 import org.bukkit.Material;
-import org.bukkit.attribute.Attribute;
 
 import java.util.Locale;
 
@@ -16,6 +15,18 @@ public final class BuiltinFilters {
         registry.register(new SimpleFilter("player_only", context -> context.player().isPresent()));
         registry.register(new SimpleFilter("entity_only", context -> context.entity().isPresent()));
         registry.register(new SimpleFilter("location_only", context -> context.location().isPresent()));
+        registry.register(new SimpleFilter("target_player_only", context -> context.targetPlayer().isPresent()));
+        registry.register(new SimpleFilter("actor_player_only", context -> context.actorPlayer().isPresent()));
+        registry.register(new SimpleFilter("target_entity_type", context ->
+                context.target().map(entity -> entity.getType().name().equals(BuiltinValue.minecraftKey(BuiltinValue.string(context, "type", "")))).orElse(false)));
+        registry.register(new SimpleFilter("not_target_entity_type", context ->
+                context.target().map(entity -> !entity.getType().name().equals(BuiltinValue.minecraftKey(BuiltinValue.string(context, "type", "")))).orElse(true)));
+        registry.register(new SimpleFilter("actor_entity_type", context ->
+                context.actor().map(entity -> entity.getType().name().equals(BuiltinValue.minecraftKey(BuiltinValue.string(context, "type", "")))).orElse(false)));
+        registry.register(new SimpleFilter("not_actor_entity_type", context ->
+                context.actor().map(entity -> !entity.getType().name().equals(BuiltinValue.minecraftKey(BuiltinValue.string(context, "type", "")))).orElse(true)));
+        registry.register(new SimpleFilter("target_not_creeper", context ->
+                context.target().map(entity -> !entity.getType().name().equals("CREEPER")).orElse(true)));
         registry.register(new SimpleFilter("world", context ->
                 context.world().map(value -> value.getName().equalsIgnoreCase(BuiltinValue.string(context, "world", ""))).orElse(false)));
         registry.register(new SimpleFilter("not_world", context ->
@@ -59,14 +70,8 @@ public final class BuiltinFilters {
         registry.register(new SimpleFilter("name_contains", context ->
                 context.player().map(player -> player.getName().toLowerCase(Locale.ROOT).contains(BuiltinValue.string(context, "text", "").toLowerCase(Locale.ROOT))).orElse(false)));
         registry.register(new SimpleFilter("attribute_range", context ->
-                context.player().flatMap(player -> {
-                    try {
-                        Attribute attribute = Attribute.valueOf(BuiltinValue.string(context, "attribute", "").toUpperCase(Locale.ROOT));
-                        return java.util.Optional.ofNullable(player.getAttribute(attribute)).map(instance -> instance.getValue());
-                    } catch (IllegalArgumentException exception) {
-                        return java.util.Optional.<Double>empty();
-                    }
-                }).map(value -> value >= BuiltinValue.decimal(context, "min", Double.NEGATIVE_INFINITY)
+                context.entity().flatMap(entity -> BuiltinAttribute.value(entity, BuiltinValue.string(context, "attribute", "")))
+                        .map(value -> value >= BuiltinValue.decimal(context, "min", Double.NEGATIVE_INFINITY)
                         && value <= BuiltinValue.decimal(context, "max", Double.POSITIVE_INFINITY)).orElse(false)));
         registry.register(new SimpleFilter("vault_has_money", context -> context.player()
                 .flatMap(player -> com.ataraxia.atxcore.ATXCorePlugin.getPlugin(com.ataraxia.atxcore.ATXCorePlugin.class).integrations().vault()
