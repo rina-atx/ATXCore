@@ -4,6 +4,7 @@ import com.ataraxia.atxcore.api.ATXCoreApi;
 import com.ataraxia.atxcore.api.registry.CoreRegistries;
 import com.ataraxia.atxcore.command.ATXCoreCommand;
 import com.ataraxia.atxcore.integration.IntegrationManager;
+import com.ataraxia.atxcore.mechanic.config.EcoStyleMechanicLoader;
 import com.ataraxia.atxcore.mechanic.builtin.BuiltinMechanics;
 import com.ataraxia.atxcore.placeholder.PlaceholderService;
 import org.bukkit.Bukkit;
@@ -16,6 +17,7 @@ public final class ATXCorePlugin extends JavaPlugin implements ATXCoreApi {
     private CoreRegistries registries;
     private PlaceholderService placeholders;
     private IntegrationManager integrations;
+    private EcoStyleMechanicLoader mechanicLoader;
 
     @Override
     public void onEnable() {
@@ -25,6 +27,7 @@ public final class ATXCorePlugin extends JavaPlugin implements ATXCoreApi {
         this.registries = new CoreRegistries();
         this.placeholders = new PlaceholderService(this);
         this.integrations = new IntegrationManager(this, placeholders);
+        this.mechanicLoader = new EcoStyleMechanicLoader(this);
 
         BuiltinMechanics.registerAll(this, registries, placeholders);
         integrations.load();
@@ -61,6 +64,11 @@ public final class ATXCorePlugin extends JavaPlugin implements ATXCoreApi {
     @Override
     public IntegrationManager integrations() {
         return integrations;
+    }
+
+    @Override
+    public EcoStyleMechanicLoader mechanicLoader() {
+        return mechanicLoader;
     }
 
     public boolean debug() {
