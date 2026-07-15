@@ -5,7 +5,6 @@ import com.ataraxia.atxcore.mechanic.ExecutionContext;
 import com.ataraxia.atxcore.mechanic.mutator.Mutator;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.EntityType;
 
 import java.util.Locale;
@@ -16,7 +15,39 @@ public final class BuiltinMutators {
     }
 
     public static void register(CoreRegistry<Mutator<?>> registry) {
-        registry.register(new SimpleMutator("data", context -> {
+        registry.register(new SimpleMutator("target_actor", context ->
+                context.actor().map(actor -> context.toBuilder().activeEntity(actor).location(actor.getLocation()).build()).orElse(context)));
+        registry.register(new SimpleMutator("target_attacker", context ->
+                context.actor().map(actor -> context.toBuilder().activeEntity(actor).location(actor.getLocation()).build()).orElse(context)));
+        registry.register(new SimpleMutator("target_self", context ->
+                context.actor().map(actor -> context.toBuilder().activeEntity(actor).location(actor.getLocation()).build()).orElse(context)));
+        registry.register(new SimpleMutator("target_victim", context ->
+                context.target().map(target -> context.toBuilder().activeEntity(target).location(target.getLocation()).build()).orElse(context)));
+        registry.register(new SimpleMutator("target_target", context ->
+                context.target().map(target -> context.toBuilder().activeEntity(target).location(target.getLocation()).build()).orElse(context)));
+        registry.register(new SimpleMutator("target_trigger_location", context ->
+                context.toBuilder().location(context.location().orElse(null)).build()));
+        registry.register(new SimpleMutator("actor_to_data", context -> {
+            context.actor().ifPresent(actor -> {
+                context.data().put("actor_uuid", actor.getUniqueId().toString());
+                context.data().put("actor_type", actor.getType().name());
+                if (actor instanceof org.bukkit.entity.Player player) {
+                    context.data().put("actor", player.getName());
+                }
+            });
+            return context;
+        }));
+        registry.register(new SimpleMutator("target_to_data", context -> {
+            context.target().ifPresent(target -> {
+                context.data().put("target_uuid", target.getUniqueId().toString());
+                context.data().put("target_type", target.getType().name());
+                if (target instanceof org.bukkit.entity.Player player) {
+                    context.data().put("target", player.getName());
+                }
+            });
+            return context;
+        }));
+        registry.register(new SimpleMutator("set_data", context -> {
             context.stringData("key").ifPresent(key -> context.data().put(key, BuiltinValue.string(context, "value", "")));
             return context;
         }));
@@ -144,15 +175,9 @@ public final class BuiltinMutators {
         }));
         registry.register(new SimpleMutator("attribute_to_data", context -> {
             String key = BuiltinValue.string(context, "key", "attribute");
-            context.player().ifPresent(player -> {
-                try {
-                    Attribute attribute = Attribute.valueOf(BuiltinValue.string(context, "attribute", "").toUpperCase(Locale.ROOT));
-                    if (player.getAttribute(attribute) != null) {
-                        context.data().put(key, player.getAttribute(attribute).getValue());
-                    }
-                } catch (IllegalArgumentException ignored) {
-                }
-            });
+            context.entity()
+                    .flatMap(entity -> BuiltinAttribute.value(entity, BuiltinValue.string(context, "attribute", "")))
+                    .ifPresent(value -> context.data().put(key, value));
             return context;
         }));
         registry.register(new SimpleMutator("stat_to_data", context -> {
