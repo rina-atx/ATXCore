@@ -4,6 +4,30 @@ All built-in mechanic IDs are plain IDs. For example, use `message`, not `atxcor
 
 Future plugins can still register namespaced IDs if they want, such as `myplugin:custom_effect`.
 
+Recommended future-plugin YAML shape:
+
+```yaml
+chains:
+  bleed-hit:
+    trigger: "melee_attack"
+    conditions:
+      - id: "actor_health_above"
+        data:
+          amount: 20
+    mutators:
+      - id: "target_victim"
+    filters:
+      - id: "not_target_entity_type"
+        data:
+          type: "minecraft:creeper"
+    effects:
+      - id: "damage"
+        data:
+          amount: 4
+```
+
+Each step's `data` is local config for that mechanic. Trigger/event runtime data is separate and can be read through `{data.key}`.
+
 ## Effects
 
 - `message`
@@ -76,6 +100,22 @@ Future plugins can still register namespaced IDs if they want, such as `myplugin
 - `set_armor_toughness`
 - `set_knockback_resistance`
 - `set_luck`
+- `set_follow_range`
+- `set_flying_speed_attribute`
+- `set_attack_knockback`
+- `set_max_absorption_attribute`
+- `set_safe_fall_distance`
+- `set_scale`
+- `set_step_height`
+- `set_gravity_attribute`
+- `set_jump_strength`
+- `set_block_interaction_range`
+- `set_entity_interaction_range`
+- `set_block_break_speed`
+- `set_mining_efficiency`
+- `set_sneaking_speed`
+- `set_submerged_mining_speed`
+- `set_sweeping_damage_ratio`
 - `set_attribute`
 - `add_attribute`
 - `reset_attribute`
@@ -94,12 +134,54 @@ Future plugins can still register namespaced IDs if they want, such as `myplugin
 - `vault_withdraw`
 - `vault_set_balance`
 
+## Triggers
+
+- `player_join`
+- `player_quit`
+- `player_kick`
+- `player_death`
+- `player_respawn`
+- `player_changed_world`
+- `player_move`
+- `player_teleport`
+- `player_chat`
+- `player_command`
+- `player_interact`
+- `player_drop_item`
+- `player_pickup_item`
+- `player_consume_item`
+- `player_item_break`
+- `player_swap_hands`
+- `player_level_change`
+- `player_exp_change`
+- `block_break`
+- `block_place`
+- `entity_damage`
+- `entity_damage_by_entity`
+- `entity_death`
+- `food_level_change`
+- `projectile_hit`
+- `entity_shoot_bow`
+- `inventory_click`
+- `inventory_open`
+- `inventory_close`
+- `player_fish`
+- `melee_attack`
+- `projectile_attack`
+
+Trigger-provided context data includes the `event` key and any relevant event values, such as `block_type`, `material`, `amount`, `damage`, `final_damage`, `cause`, `slot`, `click`, `state`, `old_level`, or `new_level`.
+
 ## Conditions
 
 - `permission`
 - `chance`
 - `placeholder_equals`
 - `player_online`
+- `actor_player`
+- `target_player`
+- `actor_health_above`
+- `target_health_above`
+- `actor_has_permission`
 - `world`
 - `gamemode`
 - `health_above`
@@ -137,9 +219,18 @@ Future plugins can still register namespaced IDs if they want, such as `myplugin
 
 ## Filters
 
+`target_*` filters inspect the trigger's original target. `actor_*` filters inspect the original actor. Generic filters such as `entity_only`, `health_range`, and `attribute_range` inspect the current active context after mutators run.
+
 - `player_only`
 - `entity_only`
 - `location_only`
+- `target_player_only`
+- `actor_player_only`
+- `target_entity_type`
+- `not_target_entity_type`
+- `actor_entity_type`
+- `not_actor_entity_type`
+- `target_not_creeper`
 - `world`
 - `not_world`
 - `permission`
@@ -162,7 +253,15 @@ Future plugins can still register namespaced IDs if they want, such as `myplugin
 
 ## Mutators
 
-- `data`
+- `target_actor`
+- `target_attacker`
+- `target_self`
+- `target_victim`
+- `target_target`
+- `target_trigger_location`
+- `actor_to_data`
+- `target_to_data`
+- `set_data`
 - `remove_data`
 - `clear_data`
 - `copy_data`
