@@ -8,8 +8,6 @@ import com.ataraxia.atxcore.placeholder.PlaceholderService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -17,6 +15,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import java.util.Locale;
+import java.util.function.BiConsumer;
 
 public final class BuiltinEffects {
     private BuiltinEffects() {
@@ -24,7 +23,9 @@ public final class BuiltinEffects {
 
     public static void register(ATXCorePlugin plugin, CoreRegistry<Effect<?>> registry, PlaceholderService placeholders) {
         registry.register(new SimpleEffect("message", context ->
-                context.sender().ifPresent(sender -> sender.sendMessage(placeholders.apply(BuiltinValue.string(context, "message", ""), context)))));
+                context.player().ifPresentOrElse(
+                        player -> player.sendMessage(placeholders.apply(BuiltinValue.string(context, "message", ""), context)),
+                        () -> context.sender().ifPresent(sender -> sender.sendMessage(placeholders.apply(BuiltinValue.string(context, "message", ""), context))))));
         registry.register(new SimpleEffect("console_command", context -> {
             String command = placeholders.apply(BuiltinValue.string(context, "command", ""), context);
             if (!command.isBlank()) {
@@ -48,15 +49,23 @@ public final class BuiltinEffects {
                 })));
         registry.register(new SimpleEffect("player_command", context ->
                 context.player().ifPresent(player -> player.performCommand(placeholders.apply(BuiltinValue.string(context, "command", ""), context)))));
-        registry.register(new SimpleEffect("op_command", context -> context.player().ifPresent(player -> {
-            boolean wasOp = player.isOp();
-            try {
-                player.setOp(true);
-                player.performCommand(placeholders.apply(BuiltinValue.string(context, "command", ""), context));
-            } finally {
-                player.setOp(wasOp);
+        registry.register(new SimpleEffect("op_command", context -> {
+            if (!plugin.getConfig().getBoolean("security.allow-op-command", false)) {
+                if (plugin.debug()) {
+                    plugin.getLogger().warning("Blocked op_command because security.allow-op-command is false.");
+                }
+                return;
             }
-        })));
+            context.player().ifPresent(player -> {
+                boolean wasOp = player.isOp();
+                try {
+                    player.setOp(true);
+                    player.performCommand(placeholders.apply(BuiltinValue.string(context, "command", ""), context));
+                } finally {
+                    player.setOp(wasOp);
+                }
+            });
+        }));
         registry.register(new SimpleEffect("teleport", context -> context.player().ifPresent(player -> {
             Location location = BuiltinValue.location(context);
             if (location != null) {
@@ -65,30 +74,34 @@ public final class BuiltinEffects {
         })));
         registry.register(new SimpleEffect("teleport_world_spawn", context -> context.player().ifPresent(player ->
                 context.world().ifPresent(world -> player.teleport(world.getSpawnLocation())))));
-        registry.register(new SimpleEffect("heal", context ->
-                context.player().ifPresent(player -> player.setHealth(Math.min(player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue(), BuiltinValue.decimal(context, "amount", player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue()))))));
-        registry.register(new SimpleEffect("add_health", context ->
-                context.player().ifPresent(player -> player.setHealth(Math.min(player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue(), player.getHealth() + BuiltinValue.decimal(context, "amount", 1))))));
+        registry.register(new SimpleEffect("heal", context -> context.player().ifPresent(player -> {
+            double maxHealth = maxHealth(player);
+            player.setHealth(clamp(BuiltinValue.decimal(context, "amount", maxHealth), 0, maxHealth));
+        })));
+        registry.register(new SimpleEffect("add_health", context -> context.player().ifPresent(player -> {
+            double maxHealth = maxHealth(player);
+            player.setHealth(clamp(player.getHealth() + BuiltinValue.decimal(context, "amount", 1), 0, maxHealth));
+        })));
         registry.register(new SimpleEffect("damage", context ->
-                context.player().ifPresent(player -> player.damage(BuiltinValue.decimal(context, "amount", 1)))));
+                context.player().ifPresent(player -> player.damage(nonNegative(BuiltinValue.decimal(context, "amount", 1))))));
         registry.register(new SimpleEffect("kill", context ->
                 context.player().ifPresent(player -> player.setHealth(0))));
         registry.register(new SimpleEffect("feed", context -> context.player().ifPresent(player -> {
-            player.setFoodLevel(Math.min(20, BuiltinValue.integer(context, "amount", 20)));
-            player.setSaturation((float) Math.min(20, BuiltinValue.decimal(context, "saturation", 20)));
+            player.setFoodLevel(clampInt(BuiltinValue.integer(context, "amount", 20), 0, 20));
+            player.setSaturation((float) clamp(BuiltinValue.decimal(context, "saturation", 20), 0, 20));
         })));
         registry.register(new SimpleEffect("add_food", context ->
-                context.player().ifPresent(player -> player.setFoodLevel(Math.min(20, player.getFoodLevel() + BuiltinValue.integer(context, "amount", 1))))));
+                context.player().ifPresent(player -> player.setFoodLevel(clampInt(player.getFoodLevel() + BuiltinValue.integer(context, "amount", 1), 0, 20)))));
         registry.register(new SimpleEffect("set_saturation", context ->
-                context.player().ifPresent(player -> player.setSaturation(BuiltinValue.floating(context, "amount", 5)))));
+                context.player().ifPresent(player -> player.setSaturation((float) clamp(BuiltinValue.floating(context, "amount", 5), 0, 20)))));
         registry.register(new SimpleEffect("extinguish", context ->
                 context.entity().ifPresent(entity -> entity.setFireTicks(0))));
         registry.register(new SimpleEffect("set_fire_ticks", context ->
-                context.entity().ifPresent(entity -> entity.setFireTicks(BuiltinValue.integer(context, "ticks", 100)))));
+                context.entity().ifPresent(entity -> entity.setFireTicks(Math.max(0, BuiltinValue.integer(context, "ticks", 100))))));
         registry.register(new SimpleEffect("add_potion", context -> context.player().ifPresent(player -> {
             PotionEffectType type = PotionEffectType.getByName(BuiltinValue.string(context, "type", "SPEED").toUpperCase(Locale.ROOT));
             if (type != null) {
-                player.addPotionEffect(new PotionEffect(type, BuiltinValue.integer(context, "duration", 200), BuiltinValue.integer(context, "amplifier", 0)));
+                player.addPotionEffect(new PotionEffect(type, Math.max(1, BuiltinValue.integer(context, "duration", 200)), Math.max(0, BuiltinValue.integer(context, "amplifier", 0))));
             }
         })));
         registry.register(new SimpleEffect("remove_potion", context -> context.player().ifPresent(player -> {
@@ -127,7 +140,7 @@ public final class BuiltinEffects {
         registry.register(new SimpleEffect("set_exp", context ->
                 context.player().ifPresent(player -> player.setExp(Math.max(0, Math.min(1, BuiltinValue.floating(context, "amount", 0)))))));
         registry.register(new SimpleEffect("give_exp", context ->
-                context.player().ifPresent(player -> player.giveExp(BuiltinValue.integer(context, "amount", 1)))));
+                context.player().ifPresent(player -> player.giveExp(Math.max(0, BuiltinValue.integer(context, "amount", 1))))));
         registry.register(new SimpleEffect("set_level", context ->
                 context.player().ifPresent(player -> player.setLevel(Math.max(0, BuiltinValue.integer(context, "level", 0))))));
         registry.register(new SimpleEffect("add_level", context ->
@@ -137,18 +150,18 @@ public final class BuiltinEffects {
             if (location != null && location.getWorld() != null) {
                 try {
                     Particle particle = Particle.valueOf(BuiltinValue.string(context, "particle", "HAPPY_VILLAGER").toUpperCase(Locale.ROOT));
-                    location.getWorld().spawnParticle(particle, location, BuiltinValue.integer(context, "count", 10));
+                    location.getWorld().spawnParticle(particle, location, Math.max(0, BuiltinValue.integer(context, "count", 10)));
                 } catch (IllegalArgumentException ignored) {
                     plugin.getLogger().warning("Unknown particle: " + BuiltinValue.string(context, "particle", ""));
                 }
             }
         }));
         registry.register(new SimpleEffect("strike_lightning_effect", context ->
-                context.location().ifPresent(location -> location.getWorld().strikeLightningEffect(location))));
+                withWorld(context, (location, world) -> world.strikeLightningEffect(location))));
         registry.register(new SimpleEffect("strike_lightning", context ->
-                context.location().ifPresent(location -> location.getWorld().strikeLightning(location))));
+                withWorld(context, (location, world) -> world.strikeLightning(location))));
         registry.register(new SimpleEffect("explosion", context ->
-                context.location().ifPresent(location -> location.getWorld().createExplosion(location, BuiltinValue.floating(context, "power", 0), BuiltinValue.bool(context, "fire", false), BuiltinValue.bool(context, "break_blocks", false)))));
+                withWorld(context, (location, world) -> world.createExplosion(location, (float) nonNegative(BuiltinValue.floating(context, "power", 0)), BuiltinValue.bool(context, "fire", false), BuiltinValue.bool(context, "break_blocks", false)))));
         registry.register(new SimpleEffect("set_time", context ->
                 context.world().ifPresent(world -> world.setTime(BuiltinValue.integer(context, "time", 0)))));
         registry.register(new SimpleEffect("set_weather_clear", context -> context.world().ifPresent(world -> {
@@ -220,7 +233,9 @@ public final class BuiltinEffects {
         registry.register(new SimpleEffect("delayed_message", context -> {
             int delay = Math.max(1, BuiltinValue.integer(context, "delay", 20));
             String message = placeholders.apply(BuiltinValue.string(context, "message", ""), context);
-            context.sender().ifPresent(sender -> Bukkit.getScheduler().runTaskLater(plugin, () -> sender.sendMessage(message), delay));
+            context.player().ifPresentOrElse(
+                    player -> Bukkit.getScheduler().runTaskLater(plugin, () -> player.sendMessage(message), delay),
+                    () -> context.sender().ifPresent(sender -> Bukkit.getScheduler().runTaskLater(plugin, () -> sender.sendMessage(message), delay)));
         }));
         registry.register(new SimpleEffect("repeat_console_command", context -> {
             int times = Math.max(1, BuiltinValue.integer(context, "times", 1));
@@ -229,19 +244,35 @@ public final class BuiltinEffects {
                 Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command), (long) i * Math.max(1, BuiltinValue.integer(context, "interval", 20)));
             }
         }));
-        registry.register(new SimpleEffect("set_max_health", context -> setAttribute(context, "GENERIC_MAX_HEALTH", BuiltinValue.decimal(context, "amount", 20))));
-        registry.register(new SimpleEffect("add_max_health", context -> addAttribute(context, "GENERIC_MAX_HEALTH", BuiltinValue.decimal(context, "amount", 1))));
-        registry.register(new SimpleEffect("reset_max_health", context -> resetAttribute(context, "GENERIC_MAX_HEALTH")));
-        registry.register(new SimpleEffect("set_attack_damage", context -> setAttribute(context, "GENERIC_ATTACK_DAMAGE", BuiltinValue.decimal(context, "amount", 1))));
-        registry.register(new SimpleEffect("add_attack_damage", context -> addAttribute(context, "GENERIC_ATTACK_DAMAGE", BuiltinValue.decimal(context, "amount", 1))));
-        registry.register(new SimpleEffect("set_attack_speed", context -> setAttribute(context, "GENERIC_ATTACK_SPEED", BuiltinValue.decimal(context, "amount", 4))));
-        registry.register(new SimpleEffect("set_movement_speed", context -> setAttribute(context, "GENERIC_MOVEMENT_SPEED", BuiltinValue.decimal(context, "amount", 0.1))));
-        registry.register(new SimpleEffect("add_movement_speed", context -> addAttribute(context, "GENERIC_MOVEMENT_SPEED", BuiltinValue.decimal(context, "amount", 0.01))));
-        registry.register(new SimpleEffect("set_armor", context -> setAttribute(context, "GENERIC_ARMOR", BuiltinValue.decimal(context, "amount", 0))));
-        registry.register(new SimpleEffect("add_armor", context -> addAttribute(context, "GENERIC_ARMOR", BuiltinValue.decimal(context, "amount", 1))));
-        registry.register(new SimpleEffect("set_armor_toughness", context -> setAttribute(context, "GENERIC_ARMOR_TOUGHNESS", BuiltinValue.decimal(context, "amount", 0))));
-        registry.register(new SimpleEffect("set_knockback_resistance", context -> setAttribute(context, "GENERIC_KNOCKBACK_RESISTANCE", BuiltinValue.decimal(context, "amount", 0))));
-        registry.register(new SimpleEffect("set_luck", context -> setAttribute(context, "GENERIC_LUCK", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("set_max_health", context -> setAttribute(context, "MAX_HEALTH", BuiltinValue.decimal(context, "amount", 20))));
+        registry.register(new SimpleEffect("add_max_health", context -> addAttribute(context, "MAX_HEALTH", BuiltinValue.decimal(context, "amount", 1))));
+        registry.register(new SimpleEffect("reset_max_health", context -> resetAttribute(context, "MAX_HEALTH")));
+        registry.register(new SimpleEffect("set_attack_damage", context -> setAttribute(context, "ATTACK_DAMAGE", BuiltinValue.decimal(context, "amount", 1))));
+        registry.register(new SimpleEffect("add_attack_damage", context -> addAttribute(context, "ATTACK_DAMAGE", BuiltinValue.decimal(context, "amount", 1))));
+        registry.register(new SimpleEffect("set_attack_speed", context -> setAttribute(context, "ATTACK_SPEED", BuiltinValue.decimal(context, "amount", 4))));
+        registry.register(new SimpleEffect("set_movement_speed", context -> setAttribute(context, "MOVEMENT_SPEED", BuiltinValue.decimal(context, "amount", 0.1))));
+        registry.register(new SimpleEffect("add_movement_speed", context -> addAttribute(context, "MOVEMENT_SPEED", BuiltinValue.decimal(context, "amount", 0.01))));
+        registry.register(new SimpleEffect("set_armor", context -> setAttribute(context, "ARMOR", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("add_armor", context -> addAttribute(context, "ARMOR", BuiltinValue.decimal(context, "amount", 1))));
+        registry.register(new SimpleEffect("set_armor_toughness", context -> setAttribute(context, "ARMOR_TOUGHNESS", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("set_knockback_resistance", context -> setAttribute(context, "KNOCKBACK_RESISTANCE", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("set_luck", context -> setAttribute(context, "LUCK", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("set_follow_range", context -> setAttribute(context, "FOLLOW_RANGE", BuiltinValue.decimal(context, "amount", 16))));
+        registry.register(new SimpleEffect("set_flying_speed_attribute", context -> setAttribute(context, "FLYING_SPEED", BuiltinValue.decimal(context, "amount", 0.4))));
+        registry.register(new SimpleEffect("set_attack_knockback", context -> setAttribute(context, "ATTACK_KNOCKBACK", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("set_max_absorption_attribute", context -> setAttribute(context, "MAX_ABSORPTION", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("set_safe_fall_distance", context -> setAttribute(context, "SAFE_FALL_DISTANCE", BuiltinValue.decimal(context, "amount", 3))));
+        registry.register(new SimpleEffect("set_scale", context -> setAttribute(context, "SCALE", BuiltinValue.decimal(context, "amount", 1))));
+        registry.register(new SimpleEffect("set_step_height", context -> setAttribute(context, "STEP_HEIGHT", BuiltinValue.decimal(context, "amount", 0.6))));
+        registry.register(new SimpleEffect("set_gravity_attribute", context -> setAttribute(context, "GRAVITY", BuiltinValue.decimal(context, "amount", 0.08))));
+        registry.register(new SimpleEffect("set_jump_strength", context -> setAttribute(context, "JUMP_STRENGTH", BuiltinValue.decimal(context, "amount", 0.42))));
+        registry.register(new SimpleEffect("set_block_interaction_range", context -> setAttribute(context, "BLOCK_INTERACTION_RANGE", BuiltinValue.decimal(context, "amount", 4.5))));
+        registry.register(new SimpleEffect("set_entity_interaction_range", context -> setAttribute(context, "ENTITY_INTERACTION_RANGE", BuiltinValue.decimal(context, "amount", 3))));
+        registry.register(new SimpleEffect("set_block_break_speed", context -> setAttribute(context, "BLOCK_BREAK_SPEED", BuiltinValue.decimal(context, "amount", 1))));
+        registry.register(new SimpleEffect("set_mining_efficiency", context -> setAttribute(context, "MINING_EFFICIENCY", BuiltinValue.decimal(context, "amount", 0))));
+        registry.register(new SimpleEffect("set_sneaking_speed", context -> setAttribute(context, "SNEAKING_SPEED", BuiltinValue.decimal(context, "amount", 0.3))));
+        registry.register(new SimpleEffect("set_submerged_mining_speed", context -> setAttribute(context, "SUBMERGED_MINING_SPEED", BuiltinValue.decimal(context, "amount", 0.2))));
+        registry.register(new SimpleEffect("set_sweeping_damage_ratio", context -> setAttribute(context, "SWEEPING_DAMAGE_RATIO", BuiltinValue.decimal(context, "amount", 0))));
         registry.register(new SimpleEffect("set_attribute", context -> setAttribute(context, BuiltinValue.string(context, "attribute", ""), BuiltinValue.decimal(context, "amount", 0))));
         registry.register(new SimpleEffect("add_attribute", context -> addAttribute(context, BuiltinValue.string(context, "attribute", ""), BuiltinValue.decimal(context, "amount", 1))));
         registry.register(new SimpleEffect("reset_attribute", context -> resetAttribute(context, BuiltinValue.string(context, "attribute", ""))));
@@ -284,6 +315,15 @@ public final class BuiltinEffects {
                 }))));
     }
 
+    private static void withWorld(ExecutionContext context, BiConsumer<Location, World> action) {
+        context.location().ifPresent(location -> {
+            World world = location.getWorld();
+            if (world != null) {
+                action.accept(location, world);
+            }
+        });
+    }
+
     private static void playSound(ATXCorePlugin plugin, ExecutionContext context) {
         String soundName = BuiltinValue.string(context, "sound", "ENTITY_PLAYER_LEVELUP");
         context.player().ifPresent(player -> {
@@ -295,37 +335,59 @@ public final class BuiltinEffects {
         });
     }
 
+    private static double maxHealth(org.bukkit.entity.Player player) {
+        return nonNegative(BuiltinAttribute.value(player, "MAX_HEALTH").orElse(player.getHealth()));
+    }
+
+    private static double clamp(double value, double min, double max) {
+        if (Double.isNaN(value)) {
+            return min;
+        }
+        if (value == Double.POSITIVE_INFINITY) {
+            return max;
+        }
+        if (value == Double.NEGATIVE_INFINITY) {
+            return min;
+        }
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static double nonNegative(double value) {
+        return clamp(value, 0, Double.MAX_VALUE);
+    }
+
+    private static int clampInt(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
     private static void setAttribute(ExecutionContext context, String attributeName, double amount) {
-        context.player().ifPresent(player -> attribute(player, attributeName, instance -> {
-            instance.setBaseValue(Math.max(0, amount));
-            if (attributeName.equalsIgnoreCase("GENERIC_MAX_HEALTH") && player.getHealth() > instance.getValue()) {
-                player.setHealth(instance.getValue());
+        context.entity().ifPresent(entity -> {
+            BuiltinAttribute.set(entity, attributeName, amount);
+            if (attributeName.equalsIgnoreCase("MAX_HEALTH") && entity instanceof org.bukkit.entity.Player player) {
+                BuiltinAttribute.value(entity, attributeName).ifPresent(max -> {
+                    if (player.getHealth() > max) {
+                        player.setHealth(max);
+                    }
+                });
             }
-        }));
+        });
     }
 
     private static void addAttribute(ExecutionContext context, String attributeName, double amount) {
-        context.player().ifPresent(player -> attribute(player, attributeName, instance -> {
-            instance.setBaseValue(Math.max(0, instance.getBaseValue() + amount));
-            if (attributeName.equalsIgnoreCase("GENERIC_MAX_HEALTH") && player.getHealth() > instance.getValue()) {
-                player.setHealth(instance.getValue());
+        context.entity().ifPresent(entity -> {
+            BuiltinAttribute.add(entity, attributeName, amount);
+            if (attributeName.equalsIgnoreCase("MAX_HEALTH") && entity instanceof org.bukkit.entity.Player player) {
+                BuiltinAttribute.value(entity, attributeName).ifPresent(max -> {
+                    if (player.getHealth() > max) {
+                        player.setHealth(max);
+                    }
+                });
             }
-        }));
+        });
     }
 
     private static void resetAttribute(ExecutionContext context, String attributeName) {
-        context.player().ifPresent(player -> attribute(player, attributeName, instance -> instance.setBaseValue(instance.getDefaultValue())));
-    }
-
-    private static void attribute(org.bukkit.entity.Player player, String attributeName, java.util.function.Consumer<AttributeInstance> action) {
-        try {
-            Attribute attribute = Attribute.valueOf(attributeName.toUpperCase(Locale.ROOT));
-            AttributeInstance instance = player.getAttribute(attribute);
-            if (instance != null) {
-                action.accept(instance);
-            }
-        } catch (RuntimeException ignored) {
-        }
+        context.entity().ifPresent(entity -> BuiltinAttribute.reset(entity, attributeName));
     }
 
     private static void changeStatistic(ATXCorePlugin plugin, ExecutionContext context, StatisticAction action) {
@@ -384,3 +446,7 @@ public final class BuiltinEffects {
         SET
     }
 }
+
+
+
+
