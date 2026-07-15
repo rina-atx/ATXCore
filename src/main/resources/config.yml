@@ -1,6 +1,9 @@
 settings:
   debug: false
 
+security:
+  allow-op-command: false
+
 placeholders:
   prefix: "atxcore"
   unknown-value: ""
