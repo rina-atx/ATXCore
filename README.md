@@ -91,3 +91,17 @@ The current actor/target model is:
 - `active target`: the entity effects currently hit after mutators run.
 
 For ATXRunes configs, use `args:` instead of `data:` inside `rune-types.yml`. The same mechanic IDs are used; only the wrapper name changes.
+
+## Placeholders And Math
+
+ATXCore placeholders are read with `{placeholder}` inside mechanic data, or as `%atxcore_placeholder%` through PlaceholderAPI. Common built-ins include:
+
+- `{player}`, `{player_uuid}`, `{player_display}`
+- `{world}`, `{x}`, `{y}`, `{z}`
+- `{player_health}`, `{player_max_health}`, `{player_food}`, `{player_level}`
+- `{vault_balance}`, `{vault_balance_formatted}`
+- `{data.key_name}` for temporary pipeline context data
+
+ATXCore itself does not evaluate math expressions in generic pipeline YAML. Put final values in `data:` or calculate values in your addon before building the `ExecutionContext`.
+
+ATXRunes adds its own rune-layer placeholder and math pass before it sends data into ATXCore. In `rune-types.yml`, values such as `"4 * %tier%"`, `"%damage%"`, and `"(%tier% - 1) / 3"` are resolved by ATXRunes first, then passed to ATXCore as normal mechanic data.
