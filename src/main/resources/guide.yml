@@ -237,6 +237,7 @@ examples:
 placeholders:
   internal_format: "{placeholder}"
   papi_format: "%atxcore_placeholder%"
+  math_note: "ATXCore replaces placeholders but does not evaluate math expressions in generic addon YAML. ATXRunes evaluates rune math first, then passes the resolved number or text into ATXCore."
   examples:
     internal:
       - "{player}"
@@ -248,6 +249,26 @@ placeholders:
       - "%atxcore_player%"
       - "%atxcore_world%"
       - "%atxcore_vault_balance%"
+  common:
+    player:
+      - "{player}"
+      - "{player_uuid}"
+      - "{player_display}"
+    location:
+      - "{world}"
+      - "{x}"
+      - "{y}"
+      - "{z}"
+    stats:
+      - "{player_health}"
+      - "{player_max_health}"
+      - "{player_food}"
+      - "{player_level}"
+    economy:
+      - "{vault_balance}"
+      - "{vault_balance_formatted}"
+    context_data:
+      - "{data.key_name}"
   note: "The PlaceholderAPI prefix remains atxcore because PAPI needs a plugin identifier."
 
 integrations:
